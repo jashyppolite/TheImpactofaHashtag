@@ -1,0 +1,37 @@
+---
+title: "Write Up"
+author: "Jasmine Hyppolite"
+date: "10/13/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+ will need a statistical analysis of some sort
+ 
+ - porportion of tweets about x and action in congerss (positive or negative correlation)
+basically looking to figure out a couple pf data sources to understand the impact of a hashtag, how far it goes, does it impact legislation?
+
+congress on social media 2015-2020 : https://www.pewresearch.org/internet/2020/07/16/methodology-185/
+american trends panel wave 35: https://www.pewresearch.org/internet/dataset/american-trends-panel-wave-35/
+bills -> This dataset contains metadata for every bill introduced, including sponsors, cosponsors, committee actions, floor votes and a summary, along with the data of the last modification to the bill. : https://www.propublica.org/datastore/dataset/congressional-data-bulk-legislation-bills
+data on votes <- https://github.com/unitedstates/congress
+
+
+come up w key words to search, harassment, sexual orientation, idsbility  
+
+see what bills are being proposed and 
+
+
+get google trends data
+
+
+in relation to movements, are state legistlatures responding to social movements 
+categorize some of them and see what they might be reacting to
+
+keyword seach with stringr package
