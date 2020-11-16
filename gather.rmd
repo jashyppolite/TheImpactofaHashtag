@@ -18,40 +18,6 @@ library(ggplot2)
 
 ## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-
-```{r pressure, echo=FALSE}
-
-# exclusive_terms_100 %>%
-#   arrange(positive_to_negative_ratio) %>%
-#   slice(1:10) %>%
-#   ggplot(aes(x = term, y = proportion_of_party, color = party)) + 
-#   geom_point() +
-#   facet_wrap(~party)
-
-
-# x <- exclusive_terms_100 %>%
-#   filter(party =="R") %>%
-#   arrange(desc(proportion_of_party)) %>%
-#   slice(1:7) %>%
-#   ggplot(aes(x = term, y = proportion_of_party, color = party)) + 
-#   geom_point() + theme_bw()
-# 
-# 
-# exclusive_terms_100_D <-
-#   exclusive_terms_100 %>%
-#   filter(party == "D") %>%
-#   arrange(desc(proportion_of_party)) %>%
-#   slice(1:7) %>%
-#   ggplot(aes(x = term, y = proportion_of_party, color = party)) + 
-#   geom_point() + theme_bw()
-
-```
-
-
 2019 votes in ny state leg that have to do with legistlation 
 avg google search trends per year 
 subset to repub and dem,m & w, 
@@ -78,6 +44,7 @@ votes_clean <- votes %>%
                                            ignore_case=TRUE)),1,0),
          month_year = format(as.Date(votes$status_date), "%Y-%m")) %>% 
   group_by(month_year) %>%
+    filter(month_year != "1969-12") %>%
   summarize(police_bill_prop = mean(Police),
             hara_bill_prop = mean(Harrassment),
             assault_bill_prop = mean(Assault),
@@ -89,6 +56,24 @@ votes_clean <- votes %>%
 saveRDS(votes_clean, file = "votesclean.RDS")
 
 
+## Voting data that works with the graphs 
+votes_for_trends <- votes %>%
+  mutate(Police = ifelse(str_detect(description,
+                                    regex("police",
+                                          ignore_case=TRUE)),1,0)) %>%
+  mutate(Harrassment = ifelse(str_detect(description,
+                                    regex("harassment",
+                                          ignore_case=TRUE)),1,0)) %>%
+  mutate(Assault = ifelse(str_detect(description,
+                                     regex("sexual assault",
+                                           ignore_case=TRUE)),1,0),
+         month_year = format(as.Date(votes$status_date), "%Y-%m")) %>% 
+  group_by(month_year) %>%
+  filter(month_year != "1969-12") %>%
+  summarize(police_bill_prop = mean(Police),
+            hara_bill_prop = mean(Harrassment),
+            assault_bill_prop = mean(Assault),
+            .groups = "drop") 
 ```
 
 ```{r}
@@ -97,7 +82,9 @@ blm_google <- read.csv("data/blmtrends.csv", skip = 1) %>%
  rename(week = Week, score = X.blacklivesmatter...New.York.) %>%
   mutate(month_year = format(as.Date(week), "%Y-%m")) %>%
   group_by(month_year) %>%
-  summarize(mean_score = mean(score, na.rm = TRUE))
+  summarize(mean_score = mean(score, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(ID = "blm")
 #   slice(1:104)
 ## summarize and count of num of votes by month 
 
@@ -109,42 +96,49 @@ metoo_google <- read.csv("data/metootrends.csv", skip = 1) %>%
   mutate(month_year = format(as.Date(week), "%Y-%m")) %>%
   group_by(month_year) %>%
   summarize(mean_score = mean(score, na.rm = TRUE),
-            .groups = "drop")
+            .groups = "drop") %>%
+    mutate(ID = "metoo")
+
 
 
 #COMBINES VOTES AND BLM
-blm_votes <- left_join(blm_google, votes_clean, by = "month_year") %>%
+blm_votes <- left_join(blm_google, votes_for_trends, by = "month_year") %>%
   select(-hara_bill_prop, -assault_bill_prop) %>%
   mutate(police_bill_prop = ifelse(is.na(police_bill_prop), 0,
                                    police_bill_prop)) %>%
   #mutate(month_year = format(as.Date(month_year), "%Y-%m")) %>%
   mutate(month_year = as.numeric(month_year))
 
+
 saveRDS(blm_votes, file = "blmvotes.RDS")
 
 #COMBINES VOTES AND METOO
-metoo_votes <- left_join(metoo_google, votes_clean, by = "month_year") %>%
+metoo_votes <- left_join(metoo_google, votes_for_trends, by = "month_year") %>%
   #mutate(month_year = format(as.Date(month_year), "%Y-%m")) %>%
   #mutate(month_year = as.numeric(month_year)) %>%
   select(-police_bill_prop) %>%
   mutate(hara_bill_prop = ifelse(is.na(hara_bill_prop), 0, hara_bill_prop),
          assault_bill_prop = ifelse(is.na(assault_bill_prop), 0,
                                     assault_bill_prop))
+
+trends <- bind_rows(blm_google, metoo_google) 
+
+trends_w_vote <- left_join(trends, votes_for_trends, by = "month_year") %>%
+  pivot_longer(cols = c(police_bill_prop, hara_bill_prop, assault_bill_prop),
+               names_to = "bill_type",
+               values_to = "bill_prop")
+  
+
+
 ```
 
 
 ```{r graphs}
 # BLM GRAPHS
-# blm_votes %>%
-# ggplot(aes(x = month_year)) + 
-#   theme(axis.text.x = element_text(angle = - 90, vjust = 0.5)) +
-#   geom_line(aes(y = police_bill_prop, linetype="a")) +
-#   geom_line(aes(y = mean_score, linetype="b")) +
-#   scale_y_continuous(sec.axis = sec_axis(~., name = "BLM"))
 
 blm_votes %>%
   ggplot(aes(x = mean_score, y = police_bill_prop)) + geom_point() + 
-  geom_smooth(method = "lm") + 
+  geom_smooth(method = "lm", formula = y ~ x) + 
   labs(title = "Correlation Between Bills in NY Regarding Policing and Google Trend Scores",
         x = "Mean Google Trend Score for #BlackLivesMatter",
         y = "Proportion of Bills regarding Policing per Week")
@@ -156,7 +150,7 @@ blm_votes %>%
   ## Harassment
  metoo_votes %>%
    ggplot(aes(x = mean_score, y = hara_bill_prop)) + geom_point() + 
-   geom_smooth(method = "lm") + 
+   geom_smooth(method = "lm", formula = y ~ x) + 
    labs(title = "Correlation Between Bills in NY Regarding Harassment and Google Trend Scores",
         x = "Mean Google Trend Score for #MeToo",
         y = "Proportion of Bills regarding Harassment per Week") +
@@ -164,7 +158,7 @@ blm_votes %>%
   ## Assault
  metoo_votes %>%
   ggplot(aes(x = mean_score, y = assault_bill_prop)) + geom_point() + 
-  geom_smooth(method = "lm") + 
+  geom_smooth(method = "lm", formula = y ~ x) + 
   labs(title = "Correlation Between Bills in NY Regarding Assault and Google Trend Scores",
         x = "Mean Google Trend Score for #MeToo",
         y = "Proportion of Bills regarding Assault per Week")
@@ -206,7 +200,7 @@ ggplot(aes(x = month_year, y = bill_prop)) +
 
 votes_clean %>%
   filter(bill_type == "assault_bill_prop") %>%
-ggplot(aes(x = month_year, y = bill_prop))+ 
+ggplot(aes(x = month_year, y = bill_prop)) + 
   geom_point(color = "salmon") +
   theme(axis.text.x = element_text(angle = - 90, vjust = 0.5)) + 
   labs(title = "Proportion of Assault Related Bills per Month in NY",
