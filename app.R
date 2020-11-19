@@ -13,6 +13,7 @@ library(tidyverse)
 blm_google <- readRDS("blmgoogle.RDS")
 blm_votes <- readRDS("blmvotes.RDS")
 votes_clean <- readRDS("votesclean.RDS")
+metoo_votes <- readRDS("metoovotes.RDS")
 
 # Define UI for application that draws a histogram
 
@@ -48,7 +49,7 @@ ui <- navbarPage(
                October of 2017."),
            )),
   tabPanel("Google Trends and Bill Proportions",
-           titlePanel("Google Trend Hashtag Data over Time"),
+           titlePanel(""),
            fluidPage(
              titlePanel("Google Trends of Social Movements and Bills in NY"),
              sidebarLayout(
@@ -67,19 +68,43 @@ ui <- navbarPage(
                  the #MeToo Movement in mind and police bills with the 
                  #BlackLivesMatter Movement"),
            )),
+  tabPanel("Analysis",
+           titlePanel("Statistical Analysis"),
+           p("Our statistical analysis for relationship between Google Trends Data
+           regarding the Black Lives Matter and Me Too hashtags and bills brought up 
+           within the NY Legislature consisted of a linear regression model. For this 
+           project, three linear regression models were build: The first regresses the 
+           proportion of bills in the NY legislature that have to do with policing on
+           the mean Google Trends score for the Black Lives Matter hashtag per month. 
+           This model's output indicated that for every 1 point increase in the google trend score for #Black Lives Matter,
+           there is a .0006 increase in the proportion of bills discissed. This is a very small
+           impact. The second regresses the proportion of bills in the NY legislature that have to do with assault on
+           the mean Google Trends score for the Me Too hashtag per month. This second model's 
+           output indicated that for every 1 point increase in the google trend score for #MeToo,
+           there is a .0002 increase in the proportion of bills discissed. Similar to the first
+           model, this is a very small impact. Finally, third regresses the 
+           proportion of bills in the NY legislature that have to do with harassment on
+           the mean Google Trends score for the Me Too hashtag per month.The final  model's 
+           output indicated that for every 1 point increase in the google trend score for #Black Lives Matter,
+           there is also a .0006 increase in the proportion of bills discissed. 
+           Similar to the previous findings, this is a very small impact."),
+           mainPanel(plotOutput("RegrPolicing")),
+           mainPanel(plotOutput("RegrAssault")),
+           mainPanel(plotOutput("RegrHarassment"))),
   tabPanel("Discussion",
            titlePanel("Do Hashtags Really Have an Impact on Legislation?"),
-           p("Tour of the modeling choices you made and 
-              an explanation of why you made them. Within this project I tried 
-             to compare legislation in the state of NY and hashtag patters (via
-             google trends data) to find correlation between the two phenomena. 
-             While correlation does not imply causation, I wanted to see if public
-             opinion or upset about something could have any influence on the 
-             the bills we see passed. The trends shown on the Google Trends and Bill
-             Proportions page look to answer this question. For the Black LIVes
-             Matter plot, one can see a bit of correlation while looking at the 
-             slope of the line, but there is lots of room for error as also 
-             illustrated in the plot. CONTINUE FOR OTHER PLOT")),
+           p(" For this project, I attempted to understand the relationship 
+           between hashtag popularity and legislation by using Google Trend scores 
+           for specific hashtags and bills brought to the New York Legislature 
+           as proxies, respectively. To understand this relationship and answer 
+           the question of a hashtag's impact on laws and bills, I made three 
+           linear regression models to find correlation between proportions of 
+           bills having to do with either harassment, assault, or policing and 
+           popularity of hashtags via Google Trends Data. Each of these models 
+           noted a less than 0.001 correlation between bills and hashtag popularity
+           (.0006, .0006, .0002). One could interpret this data to support the 
+           statement that hashtags do not have a strong impact on legislation 
+           that covers the issue that hashtags of social movements aim to highlight")),
   tabPanel("About", 
            titlePanel("About"),
            h3("Project Background and Motivations"),
@@ -133,6 +158,73 @@ server <- function(input, output) {
 
 })
 
+  
+  output$RegrPolicing <- renderPlot({
+    
+    blm_votes %>% 
+      ggplot(aes(x = mean_score, y = police_bill_prop)) +
+      geom_point() +
+      geom_line(aes(y = fitted(police_pred)), color = "blue") + 
+      geom_label(
+        label = "Slope: .0006", 
+        x= 30,
+        y= .055,
+        color = "black") + 
+      labs(title = "Correlation between Google Trends Score Regarding #BlackLivesMatter
+          and Legislation Regarding Policing",
+           subtitle = "Description", 
+           caption = "Source",
+           x = "Average Google Trends Score per Month",
+           y = "Police Bill Prop by Month") +
+      scale_x_continuous(labels = scales::label_number()) +
+      scale_y_continuous(labels = scales::label_number()) +
+      theme_bw()
+    
+  })
+  
+  output$RegrAssault <- renderPlot({
+    
+    metoo_votes %>% 
+      ggplot(aes(x = mean_score, y = assault_bill_prop)) +
+      geom_point() +
+      geom_line(aes(y = fitted(assault_pred)), color = "blue") +
+      geom_label(
+        label = "Slope: .0002", 
+        x= 20,
+        y= .006,
+        color = "black") + 
+      labs(title = "Correlation between Google Trends Score Regarding #MeToo
+          and Legislation Regarding Assault",
+           subtitle = "Description", 
+           caption = "Source",
+           x = "Average Google Trends Score per Month",
+           y = "Assault Bill Proportion by Month") +
+      scale_x_continuous(labels = scales::label_number()) +
+      scale_y_continuous(labels = scales::label_number()) +
+      theme_bw()
+  })
+  
+  output$RegrHarassment <- renderPlot({
+    
+    metoo_votes %>% 
+      ggplot(aes(x = mean_score, y = hara_bill_prop)) +
+      geom_point() +
+      geom_line(aes(y = fitted(hara_pred)), color = "blue") +
+      geom_label(
+        label = "Slope: .0006", 
+        x= 22.5,
+        y= .02,
+        color = "black") + 
+      labs(title = "Correlation between Google Trends Score Regarding #MeToo
+          and Legislation Regarding Harassment",
+           subtitle = "Description", 
+           x = "Average Google Trends Score per Month",
+           y = "Harassment Bill Proportion by Month") +
+      scale_x_continuous(labels = scales::label_number()) +
+      scale_y_continuous(labels = scales::label_number()) +
+      theme_bw()
+    
+  })
 }
 # Run the application 
 shinyApp(ui = ui, server = server)
