@@ -15,6 +15,10 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(rstanarm)
+library(broom.mixed)
+library(gtsummary)
+library(gt)
+library(huxtable)
 ```
 
 ## R Markdown
@@ -54,7 +58,7 @@ votes_clean <- votes %>%
                names_to = "bill_type",
                values_to = "bill_prop")
 
-saveRDS(votes_clean, file = "votesclean.RDS")
+# saveRDS(votes_clean, file = "votesclean.RDS")
 
 
 ## Voting data that works with the graphs 
@@ -78,7 +82,6 @@ votes_for_trends <- votes %>%
 
 saveRDS(votes_clean, file = "votesfortrends.RDS")
 
-
 ```
 
 ```{r}
@@ -90,10 +93,10 @@ blm_google <- read.csv("data/blmtrends.csv", skip = 1) %>%
   summarize(mean_score = mean(score, na.rm = TRUE),
             .groups = "drop") %>%
   mutate(ID = "blm")
-#   slice(1:104)
+
 ## summarize and count of num of votes by month 
 
-saveRDS(blm_google, file = "blmgoogle.RDS")
+#saveRDS(blm_google, file = "blmgoogle.RDS")
 
 # ME TOO GOOGLE TRENDS DATA
 metoo_google <- read.csv("data/metootrends.csv", skip = 1) %>%
@@ -110,12 +113,14 @@ metoo_google <- read.csv("data/metootrends.csv", skip = 1) %>%
 blm_votes <- left_join(blm_google, votes_for_trends, by = "month_year") %>%
   select(-hara_bill_prop, -assault_bill_prop) %>%
   mutate(police_bill_prop = ifelse(is.na(police_bill_prop), 0,
-                                   police_bill_prop)) %>%
+                                   police_bill_prop),
+         mean_score_scale = scale(mean_score),
+         police_bill_prop_scale = scale(police_bill_prop)) %>%
   #mutate(month_year = format(as.Date(month_year), "%Y-%m")) %>%
   mutate(month_year = as.numeric(month_year))
 
 
-saveRDS(blm_votes, file = "blmvotes.RDS")
+#saveRDS(blm_votes, file = "blmvotes.RDS")
 
 #COMBINES VOTES AND METOO
 metoo_votes <- left_join(metoo_google, votes_for_trends, by = "month_year") %>%
@@ -124,13 +129,16 @@ metoo_votes <- left_join(metoo_google, votes_for_trends, by = "month_year") %>%
   select(-police_bill_prop) %>%
   mutate(hara_bill_prop = ifelse(is.na(hara_bill_prop), 0, hara_bill_prop),
          assault_bill_prop = ifelse(is.na(assault_bill_prop), 0,
-                                    assault_bill_prop))
-saveRDS(metoo_votes, file = "metoovotes.RDS")
+                                    assault_bill_prop),
+         mean_score_scale = scale(mean_score),
+         hara_bill_prop_scale = scale(hara_bill_prop),
+         assault_bill_prop_scale = scale(assault_bill_prop))
+#saveRDS(metoo_votes, file = "metoovotes.RDS")
 
 
 trends <- bind_rows(blm_google, metoo_google) 
 
-saveRDS(trends, file = "trends.RDS")
+#saveRDS(trends, file = "trends.RDS")
 
 
 trends_w_vote <- left_join(trends, votes_for_trends, by = "month_year") %>%
@@ -138,9 +146,16 @@ trends_w_vote <- left_join(trends, votes_for_trends, by = "month_year") %>%
                names_to = "bill_type",
                values_to = "bill_prop")
 
-saveRDS(trends_w_vote, file = "trendswvoteclean.RDS")
+#saveRDS(trends_w_vote, file = "trendswvoteclean.RDS")
 
-  
+      trends_w_vote %>%
+        filter(bill_type == "assault_bill_prop") %>%
+      ggplot(aes(x = mean_score, y = bill_prop)) + geom_point() + 
+      geom_smooth(method = "lm", formula = y ~ x) + 
+      labs(title = "Correlation Between Bills in NY Regarding Bill Type and Google Trend Scores",
+           x = "Mean Google Trend Score for Movement",
+           y = "Proportion of Bills per Week")
+
 
 
 ```
@@ -176,14 +191,6 @@ blm_votes %>%
         x = "Mean Google Trend Score for #MeToo",
         y = "Proportion of Bills regarding Assault per Week")
  
- ## this is by week and we probably want this by month, but maybe it would be good to have by week??
- ## I think we can take the mean weeks within the total of the month to not lose any data
-
-
-  #votes$Month_Yr <- format(as.Date(votes$status_date), "%Y-%m")
-  # groupby ... prop of bills that were in that month 
-# for each year, prop of bills that are about harassment/etc. 
-# get multiple years and filter for introduced 
 ```
 
 ```{r}
@@ -262,11 +269,17 @@ assault_pred <- stan_glm(assault_bill_prop ~ mean_score,
 
 print(assault_pred, digits = 4)
 
+#saveRDS(assault_pred, file = "assaultpred.RDS")
+
+
 police_pred <- stan_glm(police_bill_prop ~ mean_score,
                         data = blm_votes,
                         family = gaussian(),
                         refresh = 0)
 print(police_pred, digits = 6)
+
+#saveRDS(police_pred, file = "policepred.RDS")
+
 
 lm(police_bill_prop ~ mean_score,
    data = blm_votes)
@@ -275,7 +288,11 @@ hara_pred <- stan_glm(hara_bill_prop ~ mean_score,
                       data = metoo_votes,
                       family = gaussian(),
                       refresh = 0)
+
 print(hara_pred, digits = 10)
+
+# 
+#saveRDS(hara_pred, file = "harapred.RDS")
 
 
 blm_votes %>% 
@@ -337,6 +354,26 @@ metoo_votes %>%
     scale_y_continuous(labels = scales::label_number()) +
     theme_bw()
 # for every 1 point increase in google trend score, there is a .006 increase in the proportion of bills discissed
+```
+
+
+TABLE
+
+```{r}
+
+
+table <- huxreg("Police Model"  = police_pred,
+       "Harassment Model" = hara_pred,
+       "Assault Model" = assault_pred,
+       coefs = c("Intercept" = "(Intercept)", "Mean Google Trend Change" = "mean_score"),
+       number_format = 5,
+       statistics = c("Number of Observations" = "nobs"))
+
+
+saveRDS(table, file = "table.RDS")
+
+
+#       error_format = "{conf.low} to {conf.high}")
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
