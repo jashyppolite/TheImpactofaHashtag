@@ -29,6 +29,10 @@ subset to repub and dem,m & w,
 
 ```{r}
 # CODE FOR VOTES BILLS IN NY 
+
+# this code loads different csv's and puts multpile sheets together so 
+# that they can all be accessed at the same time 
+
 votes2019 <- read.csv("data/NY/csv/bills.csv")
 votes2017 <- read.csv("data/NY/bills2017-2018.csv")
 votes2015 <- read.csv("data/NY/bills2015.csv")
@@ -36,6 +40,11 @@ votes2013 <- read.csv("data/NY/bills2011.csv")
 votes2009 <- read.csv("data/NY/bills2009.csv")
 
 votes <- bind_rows(votes2019, votes2017, votes2015, votes2013, votes2009)
+
+# This code mutates the data frame such that there is a binary variable for 
+# each bill type. It then creates a column that has the mean of all bills for
+# that month. This sort of stands as a numerical representation of the 
+#prevalance of bill types per month 
 
 votes_clean <- votes %>%
   mutate(Police = ifelse(str_detect(description,
@@ -61,7 +70,10 @@ votes_clean <- votes %>%
 # saveRDS(votes_clean, file = "votesclean.RDS")
 
 
-## Voting data that works with the graphs 
+# I made a similar data frame that works better for ggplot as I modified the 
+# first version to work with my shiny app such that the user could interact
+# with different bill types
+
 votes_for_trends <- votes %>%
   mutate(Police = ifelse(str_detect(description,
                                     regex("police",
@@ -80,12 +92,16 @@ votes_for_trends <- votes %>%
             assault_bill_prop = mean(Assault),
             .groups = "drop") 
 
-saveRDS(votes_clean, file = "votesfortrends.RDS")
+# saveRDS(votes_clean, file = "votesfortrends.RDS")
 
 ```
 
 ```{r}
 # BLACK LIVES MATTER GOOGLE TRENDS DATA
+# This is the data regarding the black lives matter hashtag from Google Trends
+# data. Because the data originally had things by day, to make it work with the
+# bills dataset, I changed it months by taking the mean within a month
+
 blm_google <- read.csv("data/blmtrends.csv", skip = 1) %>%
  rename(week = Week, score = X.blacklivesmatter...New.York.) %>%
   mutate(month_year = format(as.Date(week), "%Y-%m")) %>%
@@ -94,11 +110,12 @@ blm_google <- read.csv("data/blmtrends.csv", skip = 1) %>%
             .groups = "drop") %>%
   mutate(ID = "blm")
 
-## summarize and count of num of votes by month 
 
 #saveRDS(blm_google, file = "blmgoogle.RDS")
 
 # ME TOO GOOGLE TRENDS DATA
+# the same exact thing is done with the me too movement Google Trends data set
+
 metoo_google <- read.csv("data/metootrends.csv", skip = 1) %>%
    rename(week = Week, score = X.metoo...New.York.) %>%
   mutate(month_year = format(as.Date(week), "%Y-%m")) %>%
@@ -109,21 +126,32 @@ metoo_google <- read.csv("data/metootrends.csv", skip = 1) %>%
 
 
 
-#COMBINES VOTES AND BLM
+# COMBINES VOTES AND BLM
+# Here I combine the google data set for blm with the votes and bills from the 
+# NY legislature. I remove harassment bill and assault bill columns because
+# I am focused on policing for BLM 
+
 blm_votes <- left_join(blm_google, votes_for_trends, by = "month_year") %>%
   select(-hara_bill_prop, -assault_bill_prop) %>%
   mutate(police_bill_prop = ifelse(is.na(police_bill_prop), 0,
                                    police_bill_prop),
          mean_score_scale = scale(mean_score),
          police_bill_prop_scale = scale(police_bill_prop)) %>%
-  #mutate(month_year = format(as.Date(month_year), "%Y-%m")) %>%
   mutate(month_year = as.numeric(month_year))
 
 
 #saveRDS(blm_votes, file = "blmvotes.RDS")
 
-#COMBINES VOTES AND METOO
+# COMBINES VOTES AND METOO
+# I did the same thing here as above to going the google me too data set with 
+# the new york legislature data set, and selected the relevant bils, which were
+# assault bills and harassment bills
+
 metoo_votes <- left_join(metoo_google, votes_for_trends, by = "month_year") %>%
+  
+  # I needed these lines at one point but no longer need them, but it is useful
+  # for me to see
+  
   #mutate(month_year = format(as.Date(month_year), "%Y-%m")) %>%
   #mutate(month_year = as.numeric(month_year)) %>%
   select(-police_bill_prop) %>%
@@ -135,11 +163,16 @@ metoo_votes <- left_join(metoo_google, votes_for_trends, by = "month_year") %>%
          assault_bill_prop_scale = scale(assault_bill_prop))
 #saveRDS(metoo_votes, file = "metoovotes.RDS")
 
+# I also combine the two sets google trend data sets to get all of the hashtag 
+# popularity in one place
 
 trends <- bind_rows(blm_google, metoo_google) 
 
 #saveRDS(trends, file = "trends.RDS")
 
+# I then combine this with the votes dataset in the previous chunk. This was 
+# done so that I had a dataset that could be used in the shiny app that would
+# be interactive for the user 
 
 trends_w_vote <- left_join(trends, votes_for_trends, by = "month_year") %>%
   pivot_longer(cols = c(police_bill_prop, hara_bill_prop, assault_bill_prop),
@@ -148,13 +181,17 @@ trends_w_vote <- left_join(trends, votes_for_trends, by = "month_year") %>%
 
 #saveRDS(trends_w_vote, file = "trendswvoteclean.RDS")
 
-      trends_w_vote %>%
-        filter(bill_type == "assault_bill_prop") %>%
-      ggplot(aes(x = mean_score, y = bill_prop)) + geom_point() + 
-      geom_smooth(method = "lm", formula = y ~ x) + 
-      labs(title = "Correlation Between Bills in NY Regarding Bill Type and Google Trend Scores",
-           x = "Mean Google Trend Score for Movement",
-           y = "Proportion of Bills per Week")
+# Here I make a table by bill_type to test if putting a bill type in as an 
+# option to select would push out a plot
+
+trends_w_vote %>%
+  filter(bill_type == "assault_bill_prop") %>%
+  ggplot(aes(x = mean_score, y = bill_prop)) + geom_point() + 
+  geom_smooth(method = "lm", formula = y ~ x) + 
+  labs(title = "Correlation Between Bills in NY Regarding Bill Type
+       and Google Trend Scores",
+       x = "Mean Google Trend Score for Movement",
+       y = "Proportion of Bills per Week")
 
 
 
@@ -163,6 +200,7 @@ trends_w_vote <- left_join(trends, votes_for_trends, by = "month_year") %>%
 
 ```{r graphs}
 # BLM GRAPHS
+# I also tested graphs here to be used in the app
 
 blm_votes %>%
   ggplot(aes(x = mean_score, y = police_bill_prop)) + geom_point() + 
@@ -174,6 +212,7 @@ blm_votes %>%
 
 ```{r}
 #METOO GRAPHS
+# this chunk consists of the me too movement plots, and again, was for testing
 
   ## Harassment
  metoo_votes %>%
@@ -183,7 +222,8 @@ blm_votes %>%
         x = "Mean Google Trend Score for #MeToo",
         y = "Proportion of Bills regarding Harassment per Week") +
   theme_bw()
-  ## Assault
+  
+## Assault
  metoo_votes %>%
   ggplot(aes(x = mean_score, y = assault_bill_prop)) + geom_point() + 
   geom_smooth(method = "lm", formula = y ~ x) + 
@@ -195,6 +235,11 @@ blm_votes %>%
 
 ```{r}
 # VOTES GRAPHS SEPARATELY 
+
+# these graphs are specifically for the votes on the second page on the site
+
+# this is to see prevalance of bill topics 
+
  # policing 
 votes_clean %>%
   filter(bill_type == "police_bill_prop") %>%
@@ -206,7 +251,7 @@ votes_clean %>%
        y = "Police Bill Proportion")
    
 
-# harassment
+ # harassment
 votes_clean %>%
   filter(bill_type == "hara_bill_prop") %>%
 ggplot(aes(x = month_year, y = bill_prop)) + 
@@ -216,8 +261,7 @@ ggplot(aes(x = month_year, y = bill_prop)) +
        x = "Month and Year",
        y = "Harassment Bill Proportion") 
 
-## assault
-
+ # assault
 votes_clean %>%
   filter(bill_type == "assault_bill_prop") %>%
 ggplot(aes(x = month_year, y = bill_prop)) + 
@@ -227,9 +271,12 @@ ggplot(aes(x = month_year, y = bill_prop)) +
        x = "Month and Year",
        y = "Assault Bill Proportion") 
 
-## rescale one var to fit with the other 
 
 ## Google trends data
+
+# these are to visualize google trends data and popularity over time 
+
+# BLM
 blm_google %>%
   ggplot(aes(x = month_year, y = mean_score)) + 
   geom_point(color = "red") + 
@@ -239,6 +286,7 @@ blm_google %>%
        x = "Month and Year",
        y = "Google Score") 
 
+# MeToo
 metoo_google %>%
   ggplot(aes(x = month_year, y = mean_score)) + 
   geom_point(color = "purple") + 
@@ -248,52 +296,70 @@ metoo_google %>%
        x = "Month and Year",
        y = "Google Score") 
 
-
+# this was an exoerimentation plot to figure out how to edit the x axis
 
 votes_clean %>%
   filter(bill_type == "hara_bill_prop") %>%
   ggplot(aes(x = month_year, y = bill_prop)) + 
   geom_point(color = "deepskyblue3") + 
   theme(axis.text.x = element_text(angle = - 90, vjust = 0.5)) 
-## plot on x axis: google search trends
 
 ```
 STATISTICAL ANALYSIS
 
-```{r}
+```{r models}
+
+# This R chunk is specifically for models.
+
+# Each model regresses the mean score on the proportion of bills for said topic
 
 assault_pred <- stan_glm(assault_bill_prop ~ mean_score,
          data = metoo_votes,
          family = gaussian(),
          refresh = 0)
 
+# I printed them so I could see the summary and make my own interprations\
+
 print(assault_pred, digits = 4)
 
 #saveRDS(assault_pred, file = "assaultpred.RDS")
 
+# model
 
 police_pred <- stan_glm(police_bill_prop ~ mean_score,
                         data = blm_votes,
                         family = gaussian(),
                         refresh = 0)
+
+# printing for interpretations
+
 print(police_pred, digits = 6)
 
 #saveRDS(police_pred, file = "policepred.RDS")
 
+# I tested as to whether these coefficients were the same as the models I made, 
+# as for certain graphs, I added a linear model within ggplot, and wanted to 
+# make sure it was accurate
 
 lm(police_bill_prop ~ mean_score,
    data = blm_votes)
+
+# Final model 
 
 hara_pred <- stan_glm(hara_bill_prop ~ mean_score,
                       data = metoo_votes,
                       family = gaussian(),
                       refresh = 0)
 
+# Printing for interpretaion 
+
 print(hara_pred, digits = 10)
 
-# 
 #saveRDS(hara_pred, file = "harapred.RDS")
 
+# Here I build my ggplots for each model and use geom_smooth and the lm method
+# to show the relationship. I also label the slope of the line to show the 
+# coefficient 
 
 blm_votes %>% 
   ggplot(aes(x = mean_score, y = police_bill_prop)) +
@@ -359,8 +425,15 @@ metoo_votes %>%
 
 TABLE
 
-```{r}
-
+```{r table}
+# Here I experimented with huxtable to make a regression table. I couldn't use 
+# what we have been taught in class because I have multiple models and 
+# regressions, so I used huhxreg. Unfortunately, even in office hours, we could
+# not get the table as is to show up in the shiny app, so I built it here, 
+# screenshotted it, and put it in the shiny app. I liked the detail this 
+# table gave me, so I elected to stick with it instead of making three 
+# separate tables for each regression. Otherwise people would have a hard time
+# comparing coefficient
 
 table <- huxreg("Police Model"  = police_pred,
        "Harassment Model" = hara_pred,
@@ -369,11 +442,14 @@ table <- huxreg("Police Model"  = police_pred,
        number_format = 5,
        statistics = c("Number of Observations" = "nobs"))
 
+# here I gave borders to the table as well
+left_border(table)[,1] <- 0.4
+right_border(table)[,4] <- 0.4
+
+table
 
 saveRDS(table, file = "table.RDS")
 
-
-#       error_format = "{conf.low} to {conf.high}")
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

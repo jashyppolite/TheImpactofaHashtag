@@ -7,12 +7,14 @@
 #    http://shiny.rstudio.com/
 #
 
+# libraries 
 library(shiny)
 library(readxl)
 library(tidyverse)
 library(shinythemes)
 library(huxtable)
 
+# files needed for site (images, datasets for graphing, etc )
 blm_google <- readRDS("blmgoogle.RDS")
 blm_votes <- readRDS("blmvotes.RDS")
 votes_clean <- readRDS("votesclean.RDS")
@@ -29,6 +31,9 @@ table <- readRDS("table.RDS")
 ui <- navbarPage(
   "Trends of Social Movements and Bills Concerning Similar Issues",
   tabPanel("Project Background and Motivations",
+           
+           # here I add a theme to the website
+           
            fluidPage(theme = shinytheme("flatly"),
                      titlePanel("Social Movements, Hashtags, and Change"),
                      p("In building this project, I attempted to understand the relationship 
@@ -43,9 +48,11 @@ ui <- navbarPage(
            thing many are doing to better our national community. Figuring out the impact
            of virtual movements, and consequently using that knowledge to find more ways to increase their impact, 
            can not only spread awareness of important social phenomena such as police brutality and sexual assault
-           ans harassment, but prevent the loss of innocent life due to racism and sexism 
+           and harassment, but prevent the loss of innocent life due to racism and sexism.",
+           tags$br(),
+           tags$br(),
                        
-            In an ideal world with more time and resources, this project would go further to 
+            "In an ideal world with more time and resources, this project would go further to 
             information regarding the popularity of hashtags on Twitter as well as Google, and 
             span farther in time. Additionaly, it would be great to expand the data sets regarding 
             bills in legislatures beyond New York State and compile data from legislatures across
@@ -53,7 +60,7 @@ ui <- navbarPage(
            )),
   
   tabPanel("Bill Proportions",
-           fluidPage(theme = shinytheme("flatly"),
+           fluidPage(
                      titlePanel("Proportion of Bill Types in NY Legislature"),
                      p("The data regarding New York Legislature bills comes from several combined
              LegiScan datasets of bills brought up within the Legislature across several years. 
@@ -101,9 +108,6 @@ ui <- navbarPage(
                              choices = c("police_bill_prop", "hara_bill_prop", "assault_bill_prop")),
                ),
                mainPanel(plotOutput("Comb_Plot"))),
-             p("Note that the harassment and asssault bills are to be interpreted 
-                 with the #MeToo Movement in mind and police bills with the 
-                 #BlackLivesMatter Movement in mind."),
            )),
   tabPanel("Models & Analysis",
            titlePanel("Statistical Analysis: Do Hashtags Really Impact Legislation?"),
@@ -117,26 +121,35 @@ ui <- navbarPage(
            there is a .0007 increase in the proportion of bills discussed regarding policing. This is a very small
            impact. To better understand these values, I also scaled the model to standard deviations
            and found a .271 standard deviation in the police bill proportion variable to 
-           be associated with a 1 standard deviation increase in the Google Trend Score variable. 
+           be associated with a 1 standard deviation increase in the Google Trend Score variable.",
            
-           The second regresses the proportion of bills in the NY legislature that have to do with assault on
+           tags$br(),
+           tags$br(),
+           
+           "The second regresses the proportion of bills in the NY legislature that have to do with assault on
            the mean Google Trend Score for the MeToo hashtag per month. This second model's 
            output indicated that for every 1 point increase in the Google Trend Score for #MeToo,
            there is a .0002 increase in the proportion of bills discussed regarding assault. Similar to the first
            model, this is a very small impact. To make this result a bit more interesting, I also 
            scaled the model to standard deviations. This highlighted a .294 standard deviation increase the in 
            my harassment bill proportion variable associated with a 1 standard deviation increase in
-           Google Trend Score variable. 
+           Google Trend Score variable.", 
            
-           Finally, the third model regresses theproportion of bills in the NY legislature that have to do with harassment on
+           tags$br(),
+           tags$br(),
+           
+           "Finally, the third model regresses theproportion of bills in the NY legislature that have to do with harassment on
            the mean Google Trends score for the Me Too hashtag per month. The final model's 
            output indicated that for every 1 point increase in the Google Trend Score for #Black Lives Matter,
            there is also a .0006 increase in the proportion of bills discussed regarding harassment Similar to the previous findings,
           this is a very small impact, however I still wanted to scale the model to get more information. In scaling
           this model, I found a .435 standard deviation increase associated with a 1 standard deviation increase
-          in the Google Trend Score variable.
+          in the Google Trend Score variable.", 
            
-           In conclusion, to further understand this relationship and answer 
+           tags$br(),
+           tags$br(),
+           
+           "In conclusion, to further understand this relationship and answer 
            the question of a hashtag's impact on laws and bills, I made three 
            linear regression models to find correlation between proportions of 
            bills having to do with either harassment, assault, or policing and 
@@ -146,9 +159,10 @@ ui <- navbarPage(
            magnitude of impact should warrant activists and those intersted in advocacy 
            to find other means of virtual activism and movements to supplement hashtags. 
            Overall, one could interpret this data to support the statement that hashtags 
-           do not have a strong impact on legislation, but the relationship is nevertheless positive." 
+           do not have a strong impact on legislation, but the relationship is nevertheless positive."
+         
            ),
-           mainPanel(plotOutput("RegTable")),
+           includeHTML("table.html"),
            mainPanel(plotOutput("RegrPolicing")),
            mainPanel(plotOutput("RegrAssault")),
            mainPanel(plotOutput("RegrHarassment"))),
@@ -288,9 +302,9 @@ server <- function(input, output) {
       theme_bw()
     
   })
-  
-  output$RegTable <- renderPlot({
-    
+
+  output$RegTable <- renderTable({
+
     table <- huxreg("Police Model"  = police_pred,
            "Harassment Model" = hara_pred,
            "Assault Model" = assault_pred,
@@ -298,8 +312,12 @@ server <- function(input, output) {
                      "Mean Google Trend Change" = "mean_score"),
            number_format = 5,
            statistics = c("Number of Observations" = "nobs"))
+    left_border(table)[,1] <- 0.4
+    right_border(table)[,4] <- .4
+
+    #table
     HTML(huxtable::to_html(table))
-    
+  
   })
 }
 # Run the application 
