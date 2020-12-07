@@ -30,12 +30,13 @@ table <- readRDS("table.RDS")
 
 ui <- navbarPage(
   "Trends of Social Movements and Bills Concerning Similar Issues",
-  tabPanel("Project Background and Motivations",
+  tabPanel("About",
            
            # here I add a theme to the website
            
            fluidPage(theme = shinytheme("flatly"),
-                     titlePanel("Social Movements, Hashtags, and Change"),
+                     titlePanel("Project Background and Motivations"),
+                     h3("Social Movements, Hashtags, and Change"),
                      p("In building this project, I attempted to understand the relationship 
            between hashtag popularity and legislation by using Google Trends 
            for specific hashtags and bills brought to the New York Legislature 
@@ -56,7 +57,13 @@ ui <- navbarPage(
             information regarding the popularity of hashtags on Twitter as well as Google, and 
             span farther in time. Additionaly, it would be great to expand the data sets regarding 
             bills in legislatures beyond New York State and compile data from legislatures across
-                       the entire nation."),
+                       the entire nation.",
+           tags$br(),
+           tags$br(),
+           "My name is Jasmine Hyppolite and I study Government and am part
+           of the TechScience Program. You can reach me at
+             jasminehyppolite@college.harvard.edu. Other projects can be found 
+             at https://github.com/jashyppolite. "),
            )),
   
   tabPanel("Bill Proportions",
@@ -81,7 +88,7 @@ ui <- navbarPage(
            fluidPage(
              titlePanel(""),
              p("To interpret the first spikes for each movement, it is helful to 
-             know that the The Black Lives Matter Movement began to gain 
+             know that the Black Lives Matter Movement began to gain 
                traction in 2013 after the murder of Trayvon Martin. The 
                MeToo movement gained traction over social media
                after Alyssa Milano tweeted the hashtag in 
@@ -178,27 +185,24 @@ ui <- navbarPage(
            whether is pushes positive change concerning laws, bills, and governmental
            responsibility, and whether it facilitates enough change to be the only
            thing many are doing to create change in our national community.
-           To further understand this relationship and answer 
-           the question of a hashtag's impact on laws and bills, I made three 
-           linear regression models to find correlation between proportions of 
+           
+           My understanding of this relationship and answer to 
+           the question of a hashtag's impact on laws and bills, is based on three 
+           linear regression models providing information regarding the relationship between proportions of 
            bills having to do with either harassment, assault, or policing and 
            popularity of hashtags via Google Trends Data. Each of these models 
            noted a less than 0.001 correlation between bills and hashtag popularity
-           (.0006, .0006, .0002). While still a positive correlation, such a small 
-           magnitude of impact should warrant activists and those intersted in advocacy 
-           to find other means of virtual activism and movements to supplement hashtags. 
-           Overall, one could interpret this data to support the statement that hashtags 
-           do not have a strong impact on legislation, but the relationship is nevertheless positive. 
-           ")),
-  tabPanel("About", 
-           titlePanel("About"),
-           h3("Project Background and Motivations"),
-           p(""),
-           h3("About Me"),
-           p("My name is Jasmine Hyppolite and I study Government and am part
-           of the TechScience Program. You can reach me at
-             jasminehyppolite@college.harvard.edu. Other projects can be found 
-             at https://github.com/jashyppolite. ")))
+           (.0006, .0002, .0007). While a nevertheless positive correlation, such a small 
+           magnitude of impact should warrant activists and those interested in advocacy 
+           to find other means of virtual activism and movements to supplement hashtags.
+           There is no universal scale or rule of thumb for what quantity of magnitude an 
+           effort towards change for a social movement should have, and the effects of
+           physically-based social movements have not been quantified in a similar fashion.
+           however, one ten-thousandth of a unit of change per millions of voices of social media
+           seems too small to be find comfort in being completely dependent on a hashtag for social
+           justice.
+           "))
+  )
 
 server <- function(input, output) {
   output$billplot <- renderPlot({
@@ -235,7 +239,7 @@ server <- function(input, output) {
       geom_smooth(method = "lm", formula = y ~ x) + 
       labs(title = "Correlation Between Bills in NY Regarding Bill Type and Google Trend Scores",
            x = "Mean Google Trend Score for Movement",
-           y = "Proportion of Bills per Week")
+           y = "Proportion of Bills Per Month")
 
 })
 
