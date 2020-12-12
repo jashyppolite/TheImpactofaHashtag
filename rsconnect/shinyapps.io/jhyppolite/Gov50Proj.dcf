@@ -1,0 +1,13 @@
+name: Gov50Proj
+title: Gov50Proj
+username:
+account: jhyppolite
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2905546
+bundleId: 3979839
+url: https://jhyppolite.shinyapps.io/Gov50Proj/
+when: 1607794268.5085
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: clean_engagement.xlsx|clean_exclusion.xlsx|engagement_terms_100.RDS|exclusive_terms_100.RDS|exclusive_ters_100.RDS|Writeup.Rmd

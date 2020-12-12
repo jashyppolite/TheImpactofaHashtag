@@ -322,7 +322,7 @@ assault_pred <- stan_glm(assault_bill_prop ~ mean_score,
 
 print(assault_pred, digits = 4)
 
-#saveRDS(assault_pred, file = "assaultpred.RDS")
+# saveRDS(assault_pred, file = "assaultpred.RDS")
 
 # model
 
@@ -331,7 +331,9 @@ police_pred <- stan_glm(police_bill_prop ~ mean_score,
                         family = gaussian(),
                         refresh = 0)
 
+         
 # printing for interpretations
+#mean_score  4.360374e-05 0.001273162
 
 print(police_pred, digits = 6)
 
@@ -352,7 +354,6 @@ hara_pred <- stan_glm(hara_bill_prop ~ mean_score,
                       refresh = 0)
 
 # Printing for interpretaion 
-
 print(hara_pred, digits = 10)
 
 #saveRDS(hara_pred, file = "harapred.RDS")
@@ -419,7 +420,7 @@ metoo_votes %>%
     scale_x_continuous(labels = scales::label_number()) +
     scale_y_continuous(labels = scales::label_number()) +
     theme_bw()
-# for every 1 point increase in google trend score, there is a .006 increase in the proportion of bills discissed
+
 ```
 
 
@@ -433,23 +434,62 @@ TABLE
 # screenshotted it, and put it in the shiny app. I liked the detail this 
 # table gave me, so I elected to stick with it instead of making three 
 # separate tables for each regression. Otherwise people would have a hard time
-# comparing coefficient
+# comparing coefficients
 
 table <- huxreg("Police Model"  = police_pred,
        "Harassment Model" = hara_pred,
        "Assault Model" = assault_pred,
        coefs = c("Intercept" = "(Intercept)", "Mean Google Trend Change" = "mean_score"),
        number_format = 5,
+       ci_level = .95,
        statistics = c("Number of Observations" = "nobs"))
 
 # here I gave borders to the table as well
+
 left_border(table)[,1] <- 0.4
 right_border(table)[,4] <- 0.4
 
-table
-
-saveRDS(table, file = "table.RDS")
+#saveRDS(table, file = "table.RDS")
 
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r confidence intervals}
+# I receved some helpful feedback about confidence intervals on Demo Day, so 
+# worked to incorporate them by making each model a tibble and then using the
+# quantile function to get the 95% confidence interval
+
+police_tibble <- police_pred %>%
+  as_tibble()
+
+quantile(police_tibble$mean_score, probs = c(0.025, 0.975))
+
+# Again, I make the model a tibble
+
+hara_tibble <- hara_pred %>%
+  as_tibble()
+
+# And follow by using the quantile function to get the 95% confidence interval
+
+quantile(hara_tibble$mean_score, probs = c(0.025, 0.975))
+
+# This same process is done one more time for the harassment model
+
+assault_tibble <- assault_pred %>%
+  as_tibble()
+
+quantile(assault_tibble$mean_score, probs = c(0.025, 0.975)) 
+
+
+```
+
+police <- .00004360374 - .001273162
+
+assault <- 0.0003057542 - 0.0009817151 
+
+harassment <- .00002425167 - .0002911265
+
+
+
+
